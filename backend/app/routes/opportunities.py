@@ -1,0 +1,309 @@
+import uuid
+from datetime import date, datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from sqlalchemy import select, func, or_, and_
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Optional
+from app.database import get_db
+from app.models.opportunity import Opportunity
+from app.models.profile import StudentProfile
+from app.models.user import User
+from app.auth.deps import get_current_user
+from app.services.ranking.engine import RankingEngine
+
+router = APIRouter(prefix="/api/opportunities", tags=["opportunities"])
+
+ranking_engine = RankingEngine()
+
+
+class OpportunityResponse(BaseModel):
+    id: str
+    title: str
+    company: str
+    company_logo: Optional[str] = None
+    company_founded_date: Optional[str] = None
+    company_size: Optional[str] = None
+    company_funding_stage: Optional[str] = None
+    description: str
+    source: str
+    source_url: str
+    location: Optional[str] = None
+    work_mode: Optional[str] = None
+    stipend: Optional[str] = None
+    stipend_min: Optional[int] = None
+    stipend_max: Optional[int] = None
+    duration: Optional[str] = None
+    skills_required: list[str] = []
+    domains: list[str] = []
+    posted_date: Optional[str] = None
+    deadline: Optional[str] = None
+    applicants_count: Optional[int] = None
+    is_active: bool = True
+    match_score: float = 0.0
+    match_reason: Optional[str] = None
+    created_at: Optional[str] = None
+    company_age_months: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PaginatedResponse(BaseModel):
+    items: list[OpportunityResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+@router.get("", response_model=PaginatedResponse)
+async def list_opportunities(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    search: Optional[str] = Query(None),
+    source: Optional[str] = Query(None),
+    domain: Optional[str] = Query(None),
+    location: Optional[str] = Query(None),
+    work_mode: Optional[str] = Query(None),
+    stipend_min: Optional[int] = Query(None),
+    founded_within_months: Optional[int] = Query(None, description="Only companies founded within N months"),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(Opportunity).where(Opportunity.is_active == True)
+
+    if search:
+        search_filter = or_(
+            Opportunity.title.ilike(f"%{search}%"),
+            Opportunity.company.ilike(f"%{search}%"),
+            Opportunity.description.ilike(f"%{search}%"),
+        )
+        query = query.where(search_filter)
+    if source:
+        query = query.where(Opportunity.source == source)
+    if domain:
+        query = query.where(Opportunity.domains.any(domain))
+    if location:
+        query = query.where(Opportunity.location.ilike(f"%{location}%"))
+    if work_mode:
+        query = query.where(Opportunity.work_mode == work_mode)
+    if stipend_min:
+        query = query.where(
+            or_(
+                Opportunity.stipend_min >= stipend_min,
+                Opportunity.stipend_max >= stipend_min,
+            )
+        )
+    if founded_within_months:
+        cutoff = date.today()
+        from dateutil.relativedelta import relativedelta
+        cutoff = cutoff - relativedelta(months=founded_within_months)
+        query = query.where(
+            and_(
+                Opportunity.company_founded_date.isnot(None),
+                Opportunity.company_founded_date >= cutoff,
+            )
+        )
+
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+
+    sort_column = getattr(Opportunity, sort_by, Opportunity.created_at)
+    if sort_order == "asc":
+        query = query.order_by(sort_column.asc())
+    else:
+        query = query.order_by(sort_column.desc())
+
+    query = query.offset((page - 1) * page_size).limit(page_size)
+    result = await db.execute(query)
+    opportunities = result.scalars().all()
+
+    profile_result = await db.execute(
+        select(StudentProfile).where(StudentProfile.user_id == user.id)
+    )
+    profile = profile_result.scalar_one_or_none()
+
+    if profile and opportunities:
+        scored = await ranking_engine.rank_for_user(profile, list(opportunities), db)
+        score_map = {s["opportunity_id"]: s for s in scored}
+        for opp in opportunities:
+            s = score_map.get(str(opp.id))
+            if s:
+                opp.match_score = s.get("score", 0) / 100.0
+                opp.match_reason = s.get("reason", "")
+
+    today = date.today()
+    return PaginatedResponse(
+        items=[OpportunityResponse(
+            id=str(o.id),
+            title=o.title,
+            company=o.company,
+            company_logo=o.company_logo,
+            company_founded_date=o.company_founded_date.isoformat() if o.company_founded_date else None,
+            company_size=o.company_size,
+            company_funding_stage=o.company_funding_stage,
+            description=o.description,
+            source=o.source,
+            source_url=o.source_url,
+            location=o.location,
+            work_mode=o.work_mode,
+            stipend=o.stipend,
+            stipend_min=o.stipend_min,
+            stipend_max=o.stipend_max,
+            duration=o.duration,
+            skills_required=o.skills_required or [],
+            domains=o.domains or [],
+            posted_date=o.posted_date.isoformat() if o.posted_date else None,
+            deadline=o.deadline.isoformat() if o.deadline else None,
+            applicants_count=o.applicants_count,
+            is_active=o.is_active,
+            match_score=getattr(o, "match_score", 0.0),
+            match_reason=getattr(o, "match_reason", None),
+            created_at=o.created_at.isoformat() if o.created_at else None,
+            company_age_months=round((today - o.company_founded_date).days / 30.44, 1) if o.company_founded_date else None,
+        ) for o in opportunities],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=(total + page_size - 1) // page_size if total > 0 else 1,
+    )
+
+
+@router.get("/match", response_model=PaginatedResponse)
+async def get_matches(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=50),
+    founded_within_months: Optional[int] = Query(None, description="Only companies founded within N months"),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    profile_result = await db.execute(
+        select(StudentProfile).where(StudentProfile.user_id == user.id)
+    )
+    profile = profile_result.scalar_one_or_none()
+    if not profile:
+        raise HTTPException(status_code=400, detail="Complete your profile first to get matches")
+
+    query = select(Opportunity).where(Opportunity.is_active == True)
+    if founded_within_months:
+        cutoff = date.today()
+        from dateutil.relativedelta import relativedelta
+        cutoff = cutoff - relativedelta(months=founded_within_months)
+        query = query.where(
+            and_(
+                Opportunity.company_founded_date.isnot(None),
+                Opportunity.company_founded_date >= cutoff,
+            )
+        )
+
+    result = await db.execute(query)
+    all_opps = result.scalars().all()
+    if not all_opps:
+        return PaginatedResponse(
+            items=[], total=0, page=1, page_size=page_size, total_pages=1
+        )
+
+    scored = await ranking_engine.rank_for_user(profile, list(all_opps), db, top_k=page_size)
+    opp_ids = [s["opportunity_id"] for s in scored]
+    score_map = {s["opportunity_id"]: s for s in scored}
+
+    opp_result = await db.execute(
+        select(Opportunity).where(
+            Opportunity.id.in_([uuid.UUID(oid) for oid in opp_ids if oid])
+        )
+    )
+    opportunities = opp_result.scalars().all()
+
+    for opp in opportunities:
+        s = score_map.get(str(opp.id))
+        if s:
+            opp.match_score = s.get("score", 0) / 100.0
+            opp.match_reason = s.get("reason", "")
+
+    opportunities.sort(
+        key=lambda o: getattr(o, "match_score", 0),
+        reverse=True,
+    )
+
+    today = date.today()
+    return PaginatedResponse(
+        items=[OpportunityResponse(
+            id=str(o.id),
+            title=o.title,
+            company=o.company,
+            company_logo=o.company_logo,
+            company_founded_date=o.company_founded_date.isoformat() if o.company_founded_date else None,
+            company_size=o.company_size,
+            company_funding_stage=o.company_funding_stage,
+            description=o.description,
+            source=o.source,
+            source_url=o.source_url,
+            location=o.location,
+            work_mode=o.work_mode,
+            stipend=o.stipend,
+            stipend_min=o.stipend_min,
+            stipend_max=o.stipend_max,
+            duration=o.duration,
+            skills_required=o.skills_required or [],
+            domains=o.domains or [],
+            posted_date=o.posted_date.isoformat() if o.posted_date else None,
+            deadline=o.deadline.isoformat() if o.deadline else None,
+            applicants_count=o.applicants_count,
+            is_active=o.is_active,
+            match_score=getattr(o, "match_score", 0.0),
+            match_reason=getattr(o, "match_reason", None),
+            created_at=o.created_at.isoformat() if o.created_at else None,
+            company_age_months=round((today - o.company_founded_date).days / 30.44, 1) if o.company_founded_date else None,
+        ) for o in opportunities],
+        total=len(opportunities),
+        page=page,
+        page_size=page_size,
+        total_pages=1,
+    )
+
+
+@router.get("/{opportunity_id}", response_model=OpportunityResponse)
+async def get_opportunity(
+    opportunity_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(Opportunity).where(Opportunity.id == opportunity_id)
+    )
+    opp = result.scalar_one_or_none()
+    if not opp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found")
+    today = date.today()
+    return OpportunityResponse(
+        id=str(opp.id),
+        title=opp.title,
+        company=opp.company,
+        company_logo=opp.company_logo,
+        company_founded_date=opp.company_founded_date.isoformat() if opp.company_founded_date else None,
+        company_size=opp.company_size,
+        company_funding_stage=opp.company_funding_stage,
+        description=opp.description,
+        source=opp.source,
+        source_url=opp.source_url,
+        location=opp.location,
+        work_mode=opp.work_mode,
+        stipend=opp.stipend,
+        stipend_min=opp.stipend_min,
+        stipend_max=opp.stipend_max,
+        duration=opp.duration,
+        skills_required=opp.skills_required or [],
+        domains=opp.domains or [],
+        posted_date=opp.posted_date.isoformat() if opp.posted_date else None,
+        deadline=opp.deadline.isoformat() if opp.deadline else None,
+        applicants_count=opp.applicants_count,
+        is_active=opp.is_active,
+        match_score=getattr(opp, "match_score", 0.0),
+        match_reason=getattr(opp, "match_reason", None),
+        created_at=opp.created_at.isoformat() if opp.created_at else None,
+        company_age_months=round((today - opp.company_founded_date).days / 30.44, 1) if opp.company_founded_date else None,
+    )
