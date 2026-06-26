@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/opportunities", tags=["opportunities"])
 
 ranking_engine = RankingEngine()
 
-ALLOWED_SORT_FIELDS = {"created_at", "posted_date", "stipend_min", "match_score"}
+ALLOWED_SORT_FIELDS = {"created_at", "posted_date", "stipend_min"}
 
 
 class OpportunityResponse(BaseModel):

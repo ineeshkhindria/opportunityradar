@@ -25,6 +25,7 @@ async def get_current_user(
             credentials.credentials,
             settings.supabase_jwt_secret,
             algorithms=[settings.jwt_algorithm],
+            options={"verify_exp": True},
         )
         user_id = payload.get("sub")
         if user_id is None:
@@ -35,5 +36,5 @@ async def get_current_user(
     result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     return user

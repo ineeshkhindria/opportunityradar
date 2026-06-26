@@ -1,6 +1,6 @@
 import uuid
-from datetime import datetime, date
-from sqlalchemy import String, Integer, Text, DateTime, Float, Boolean, UniqueConstraint, Date, ForeignKey
+from datetime import date
+from sqlalchemy import String, Integer, Text, Float, Boolean, UniqueConstraint, Date, ForeignKey
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base, TimestampMixin, UUIDMixin
@@ -36,13 +36,13 @@ class Opportunity(Base, TimestampMixin, UUIDMixin):
     duration: Mapped[str] = mapped_column(String(100), nullable=True)
     skills_required: Mapped[list] = mapped_column(ARRAY(String), default=list)
     domains: Mapped[list] = mapped_column(ARRAY(String), default=list)
-    posted_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    posted_date: Mapped[date] = mapped_column(Date, nullable=True)
+    deadline: Mapped[date] = mapped_column(Date, nullable=True)
     applicants_count: Mapped[int] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
-    match_score: Mapped[float] = mapped_column(Float, default=0.0)
-    match_reason: Mapped[str] = mapped_column(Text, nullable=True)
+    # match_score and match_reason are plain Python attrs set at runtime
+    # (not persisted — avoids race conditions from GET request flushes)
 
     company_rel = relationship("Company", back_populates="opportunities")
     applications = relationship("Application", back_populates="opportunity")

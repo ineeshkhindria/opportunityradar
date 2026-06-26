@@ -6,8 +6,6 @@ class Settings(BaseSettings):
     app_name: str = "OpportunityRadar"
     debug: bool = False
 
-    supabase_url: str
-    supabase_key: str
     supabase_jwt_secret: str
 
     openai_api_key: Optional[str] = None
@@ -20,7 +18,7 @@ class Settings(BaseSettings):
     from_email: str = "hello@opportunityradar.com"
 
     redis_url: str = "redis://localhost:6379/0"
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/opportunityradar"
+    database_url: str
 
     scraper_internshala_enabled: bool = True
     scraper_linkedin_enabled: bool = True

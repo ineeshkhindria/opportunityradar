@@ -67,6 +67,11 @@ class BaseScraper(ABC):
 
     @staticmethod
     def is_young_company(founded_date: Optional[date], max_years: float = 1.5) -> Optional[bool]:
+        """
+        Returns True if founded_date is within max_years, False if older, None if unknown.
+        Callers must treat None as "unknown" — not as "old" — to avoid silently
+        excluding companies that simply lack a founding date.
+        """
         if not founded_date:
             return None
         age = (date.today() - founded_date).days / 365.25

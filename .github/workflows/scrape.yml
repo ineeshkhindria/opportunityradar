@@ -29,12 +29,11 @@ jobs:
 
       - name: Run scrapers
         env:
+          PYTHONPATH: ${{ github.workspace }}/backend
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SCRAPER_LINKEDIN_ENABLED: "true"
           SCRAPER_WELLFOUND_ENABLED: "true"
           SCRAPER_INTERNSHALA_ENABLED: "false"
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           SUPABASE_JWT_SECRET: ${{ secrets.SUPABASE_JWT_SECRET }}
         run: |
           python scraper/run.py

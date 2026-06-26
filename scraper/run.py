@@ -1,9 +1,12 @@
+"""
+Standalone scraper entrypoint for CI (GitHub Actions) and local runs.
+
+Usage:
+    PYTHONPATH=backend python scraper/run.py
+
+In CI, PYTHONPATH is set via the workflow env block — see .github/workflows/scrape.yml.
+"""
 import asyncio
-import sys
-import os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
-
 from app.services.scraper.manager import ScraperManager
 from app.database import engine
 

@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import String, Integer, ForeignKey, Text
+from sqlalchemy import String, Integer, ForeignKey, Text, CheckConstraint
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base, TimestampMixin, UUIDMixin
@@ -7,6 +7,12 @@ from .base import Base, TimestampMixin, UUIDMixin
 
 class StudentProfile(Base, TimestampMixin, UUIDMixin):
     __tablename__ = "student_profiles"
+    __table_args__ = (
+        CheckConstraint(
+            "year IN ('1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year', 'Graduate', 'PhD')",
+            name="ck_profile_valid_year",
+        ),
+    )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
