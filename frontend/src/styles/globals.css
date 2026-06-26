@@ -102,9 +102,10 @@
   }
 
   .custom-select-dropdown {
-    @apply absolute z-50 mt-1 w-full rounded-xl overflow-hidden
-           bg-[#0c0c1a] border border-white/[0.08]
-           shadow-2xl shadow-black/50 backdrop-blur-2xl;
+    @apply absolute z-[100] mt-1 w-full rounded-xl overflow-hidden
+           bg-[#0c0c1a] border border-brand-500/30
+           shadow-2xl shadow-black/60 backdrop-blur-2xl
+           ring-1 ring-brand-500/10;
   }
 
   .custom-select-search {
@@ -114,17 +115,21 @@
   }
 
   .custom-select-option {
-    @apply w-full px-4 py-3 text-left text-sm text-gray-300
-           hover:bg-white/[0.06] hover:text-white
-           transition-colors duration-150 cursor-pointer;
+    @apply w-full px-4 py-3 text-left text-sm text-gray-200
+           hover:bg-brand-500/10 hover:text-white hover:pl-5
+           transition-all duration-150 cursor-pointer border-b border-white/[0.03];
+  }
+
+  .custom-select-option:last-child {
+    @apply border-b-0;
   }
 
   .custom-select-option[data-selected="true"] {
-    @apply bg-brand-500/10 text-brand-300;
+    @apply bg-brand-500/15 text-brand-300 font-medium;
   }
 
   .custom-select-option[data-highlighted="true"] {
-    @apply bg-white/[0.04] text-white;
+    @apply bg-brand-500/10 text-white;
   }
 
   /* Custom scrollbar */

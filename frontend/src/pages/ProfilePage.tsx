@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { CustomSelect } from '../components/ui/CustomSelect';
+import { CollegeAutocomplete } from '../components/ui/CollegeAutocomplete';
 
 const BRANCHES = [
   'Computer Science', 'Information Technology', 'Electronics', 'Mechanical',
@@ -166,12 +167,10 @@ export function ProfilePage() {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="label">College / University</label>
-              <input
-                type="text"
-                className="input-field"
-                placeholder="Stanford University"
+              <CollegeAutocomplete
                 value={form.college}
-                onChange={(e) => setForm({ ...form, college: e.target.value })}
+                onChange={(v) => setForm({ ...form, college: v })}
+                placeholder="Search your college..."
               />
             </div>
             <div>
