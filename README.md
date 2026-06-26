@@ -1,18 +1,15 @@
 # OpportunityRadar
 
-A smart internship aggregator that scrapes real opportunities from LinkedIn, detects young startups, and ranks them using AI to match your unique student profile.
-
-Built with students in mind — because hunting for internships across 10+ tabs is broken.
+AI-powered internship aggregator that scrapes real opportunities from LinkedIn, detects young startups, and ranks them using Google Gemini to match your student profile.
 
 ## Features
 
-- **Multi-Source Aggregation** — Real internships from LinkedIn (69+ live listings), with Wellfound and Y Combinator sources ready
-- **AI-Powered Matching** — Keyword-based ranking engine (with OpenAI/Anthropic LLM support when keys are configured)
-- **Young Startup Detection** — Automatically identifies startups and early-stage companies hiring. Filter by "Young Startups Only"
-- **Smart Rankings** — Every opportunity gets a personalized match score and explanation based on your skills, year, branch, and preferences
-- **Weekly Digest** — Your top matches delivered to your inbox (SendGrid configurable)
-- **Application Pipeline** — Track each application from saved → applied → interview → offered
-- **Custom Profile** — Skills, domains, locations, work mode, links — all used for matching
+- **Multi-Source Aggregation** — Real internships from LinkedIn (69+ live listings)
+- **AI-Powered Matching** — Google Gemini ranks every opportunity with a personalized score and explanation based on your skills, year, branch, and preferences
+- **Young Startup Detection** — Auto-identifies startups and early-stage companies
+- **Weekly Digest** — Top matches delivered to your inbox (SendGrid configurable)
+- **Application Pipeline** — Track each application: saved → applied → interview → offered
+- **Custom Profile** — Skills, domains, locations, work mode — all used for matching
 
 ## Tech Stack
 
@@ -21,42 +18,46 @@ Built with students in mind — because hunting for internships across 10+ tabs 
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS, Recharts |
 | Backend | Python 3.12, FastAPI, SQLAlchemy 2.0 (async) |
 | Database | PostgreSQL 16 (asyncpg) |
+| LLM | Google Gemini 2.5 Flash (free tier, no credit card) |
 | Auth | JWT (bcrypt + python-jose) |
 | Task Queue | Celery + Redis |
 | Scraping | httpx, Playwright, BeautifulSoup4 |
+| CI | GitHub Actions (daily scraping) |
 
-## Design
+## Architecture
 
-Dark immersive theme with glassmorphism cards, teal/cyan radar aesthetic, and custom UI components:
-
-- **CustomSelect** — Searchable dropdowns with keyboard navigation (replaces native `<select>`)
-- **HeroVisual** — Animated radar visualization with orbiting cards, sweep line, and floating particles
-- **Glassmorphism** — `backdrop-blur-xl` cards on a dark grid background
-- **Glow Effects** — Pulsing accents and subtle gradients throughout
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 20+
-- Python 3.12+
-- PostgreSQL 16
-- Redis (for Celery)
-
-### 1. Backend
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env   # edit with your database URL
-uvicorn app.main:app --reload
+```
+                    ┌─────────────┐
+                    │   Vercel    │  ← Frontend (React) + API CRUD
+                    │ (serverless)│     (auth, listings, applications)
+                    └──────┬──────┘
+                           │
+                    ┌──────▼──────┐
+                    │  Render /   │  ← Backend workers (Celery + Redis)
+                    │  Railway    │     (scraping, digest, background jobs)
+                    └──────┬──────┘
+                           │
+                    ┌──────▼──────┐
+                    │  Supabase   │  ← PostgreSQL database
+                    └─────────────┘
 ```
 
-### 2. Frontend
+**Important:** Vercel is serverless (10s max duration). Long-running background jobs (scraping, email digests) run on Render/Railway via Celery + Redis, or as GitHub Actions cron jobs.
+
+## Quick Start (Local)
 
 ```bash
+# 1. Start Postgres + Redis
+docker compose up -d db redis
+
+# 2. Backend
+cd backend
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # edit with your config
+uvicorn app.main:app --reload
+
+# 3. Frontend
 cd frontend
 npm install
 npm run dev
@@ -64,43 +65,50 @@ npm run dev
 
 Open http://localhost:5173 — register, set up your profile, and start matching.
 
-### 3. Scrape Real Data
+### Scrape Real Data
 
 ```bash
-# Trigger a scrape of 69+ LinkedIn internships
 curl -X POST http://localhost:8000/api/admin/scrape \
   -H "Authorization: Bearer <your_jwt_token>"
 ```
 
+### Run Tests
+
+```bash
+cd backend
+pip install pytest pytest-asyncio httpx
+python -m pytest tests/ -v
+```
+
 ## Deployment
 
-The project is ready for Vercel + Supabase deployment:
+### Option 1: Render (Recommended, no credit card)
 
-- `vercel.json` — routes `/api/*` to the Python backend, everything else to the React frontend
-- `api/asgi.py` — FastAPI entry point for Vercel's ASGI runtime
-- `.github/workflows/scrape.yml` — GitHub Actions workflow for automated daily scraping
-- `scraper/run.py` — standalone script to run scrapers from CI
+- **Web Service:** Deploy `backend/` as a FastAPI web service
+- **Cron Job:** Replace Celery beat with GitHub Actions (`.github/workflows/scrape.yml`)
+- **Postgres + Redis:** Use Render's free managed Postgres and Redis
 
-### Deploy on Vercel
+### Option 2: Vercel (Frontend + CRUD API only)
 
-1. Push to GitHub
-2. Import repo into Vercel
-3. Set environment variables (see `backend/.env.example`)
-4. Deploy — Vercel detects `vercel.json` and builds automatically
+See `vercel.json`. Background jobs (scraping, digests) must run elsewhere.
+
+### Option 3: Oracle Cloud Free Tier
+
+Permanent free VM (4 cores, 24 GB RAM ARM). Run the full Docker Compose stack.
 
 ## API Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/auth/register` | Create account |
-| POST | `/api/auth/login` | Sign in |
-| GET | `/api/auth/me` | Current user |
-| PUT | `/api/profile` | Update profile |
-| GET | `/api/opportunities` | List with filters |
-| GET | `/api/opportunities/match` | AI-ranked matches |
-| POST | `/api/applications` | Save opportunity |
-| PATCH | `/api/applications/{id}` | Update status |
-| POST | `/api/admin/scrape` | Trigger all scrapers |
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/auth/register` | No | Create account |
+| POST | `/api/auth/login` | No | Sign in |
+| GET | `/api/auth/me` | Yes | Current user |
+| PUT | `/api/profile` | Yes | Update profile |
+| GET | `/api/opportunities` | Yes | List with filters |
+| GET | `/api/opportunities/match` | Yes | AI-ranked matches |
+| POST | `/api/applications` | Yes | Save opportunity |
+| PATCH | `/api/applications/{id}` | Yes | Update status |
+| POST | `/api/admin/scrape` | Yes | Trigger scrapers |
 
 ## License
 
