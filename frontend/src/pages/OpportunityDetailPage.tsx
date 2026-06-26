@@ -138,9 +138,23 @@ export function OpportunityDetailPage() {
 
             {/* Match reason */}
             {opp.match_reason && (
-              <div className="mt-6 p-4 bg-brand-500/10 rounded-xl border border-brand-500/20">
-                <p className="text-sm font-medium text-brand-300">Why this fits you</p>
-                <p className="text-sm text-brand-300/70 mt-1">{opp.match_reason}</p>
+              <div className="mt-6 p-4 bg-brand-500/10 rounded-xl border border-brand-500/20 space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-brand-300">Why this fits you</p>
+                  <p className="text-sm text-brand-300/70 mt-1">{opp.match_reason}</p>
+                </div>
+                {opp.skill_gaps && opp.skill_gaps.length > 0 && (
+                  <div className="pt-3 border-t border-brand-500/10">
+                    <p className="text-xs font-medium text-amber-400/70 mb-2">Skills to learn for this role</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {opp.skill_gaps.map((skill: string) => (
+                        <span key={skill} className="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

@@ -160,7 +160,18 @@ export function DashboardPage() {
                     </div>
                     <p className="text-sm text-gray-400">{opp.company} — {opp.location || 'Remote'}</p>
                     {opp.match_reason && (
-                      <p className="text-sm text-gray-500 mt-1 truncate">{opp.match_reason}</p>
+                      <div>
+                        <p className="text-sm text-gray-500 mt-1 truncate">{opp.match_reason}</p>
+                        {opp.skill_gaps && opp.skill_gaps.length > 0 && (
+                          <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                            {opp.skill_gaps.slice(0, 2).map((skill: string) => (
+                              <span key={skill} className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-300/80 border border-amber-500/20">
+                                Learn {skill}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-500">

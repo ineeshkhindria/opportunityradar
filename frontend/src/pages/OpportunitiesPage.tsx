@@ -202,9 +202,22 @@ export function OpportunitiesPage() {
                     </div>
 
                     {opp.match_reason && (
-                      <p className="mt-3 text-sm text-gray-400 bg-white/[0.03] border border-white/[0.06] rounded-lg p-3">
-                        {opp.match_reason}
-                      </p>
+                      <div className="mt-3 text-sm text-gray-400 bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 space-y-2">
+                        <p>{opp.match_reason}</p>
+                        {opp.skill_gaps && opp.skill_gaps.length > 0 && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-amber-400/70 text-xs font-medium">Learn</span>
+                            {opp.skill_gaps.slice(0, 3).map((skill: string) => (
+                              <span key={skill} className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                                {skill}
+                              </span>
+                            ))}
+                            {opp.skill_gaps.length > 3 && (
+                              <span className="text-xs text-gray-500">+{opp.skill_gaps.length - 3} more</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
 
                     {/* Startup badge */}

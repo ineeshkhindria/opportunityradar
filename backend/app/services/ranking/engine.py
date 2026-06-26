@@ -1,5 +1,7 @@
 import json
 import logging
+import re
+import hashlib
 from typing import Optional
 from openai import AsyncOpenAI
 from anthropic import AsyncAnthropic
@@ -29,14 +31,16 @@ INTERNSHIPS:
 For each internship, provide:
 1. A match score from 0-100
 2. A concise 1-2 sentence explanation of why it fits (or doesn't fit) this student
+3. skill_gaps — specific skills this student is missing that would make them more competitive for this role. Be precise (e.g. "Kubernetes", "AWS Lambda", "PyTorch"). If none, return an empty list.
 
-Respond ONLY with a valid JSON array. No markdown, no code fences.
+Respond ONLY with valid JSON. No markdown, no code fences.
 Format:
 [
   {{
     "opportunity_id": "<uuid>",
     "score": 0-100,
-    "reason": "explanation text"
+    "reason": "explanation text",
+    "skill_gaps": ["skill1", "skill2"]
   }}
 ]
 """
@@ -47,6 +51,7 @@ class RankingEngine:
         self.openai_client = None
         self.anthropic_client = None
         self.gemini_client = None
+        self._redis = None
         self._init_clients()
 
     def _init_clients(self):
@@ -58,6 +63,20 @@ class RankingEngine:
             from google import genai
             self.gemini_client = genai.Client(api_key=settings.gemini_api_key)
 
+    async def _get_redis(self):
+        if self._redis is None and settings.redis_url:
+            try:
+                import redis.asyncio as aioredis
+                self._redis = aioredis.from_url(settings.redis_url, decode_responses=True)
+            except Exception:
+                logger.warning("Redis unavailable, caching disabled")
+        return self._redis
+
+    def _cache_key(self, profile_id: str, opportunities: list[Opportunity]) -> str:
+        sorted_ids = sorted(str(o.id) for o in opportunities)
+        raw = f"{profile_id}:{','.join(sorted_ids)}"
+        return f"rank:{hashlib.md5(raw.encode()).hexdigest()}"
+
     async def rank_for_user(
         self,
         profile: StudentProfile,
@@ -68,53 +87,74 @@ class RankingEngine:
         if not opportunities:
             return []
 
+        redis = await self._get_redis()
+        if redis:
+            ck = self._cache_key(str(profile.user_id), opportunities)
+            try:
+                cached = await redis.get(ck)
+                if cached:
+                    return json.loads(cached)
+            except Exception:
+                pass
+
         if profile.skills and profile.preferred_domains:
             pre_filtered = self._keyword_filter(profile, opportunities)
         else:
             pre_filtered = opportunities
 
         candidates = pre_filtered[:50]
+        if not candidates:
+            return []
 
         has_llm = self.openai_client or self.anthropic_client or self.gemini_client
         if not has_llm:
-            return self._score_fallback(profile, candidates)
+            result = self._score_fallback(profile, candidates)
+        else:
+            try:
+                result = await self._llm_rank(profile, candidates, top_k)
+            except Exception as e:
+                logger.error(f"LLM ranking failed: {e}, using fallback")
+                result = self._score_fallback(profile, candidates)
 
-        try:
-            return await self._llm_rank(profile, candidates, top_k)
-        except Exception as e:
-            logger.error(f"LLM ranking failed: {e}, using fallback")
-            return self._score_fallback(profile, candidates)
+        if redis and result:
+            try:
+                await redis.setex(ck, 3600, json.dumps(result))
+            except Exception:
+                pass
+        return result
 
-    def _keyword_filter(self, profile: StudentProfile, opportunities: list[Opportunity]) -> list[Opportunity]:
+    def _compute_keyword_score(self, profile: StudentProfile, opp: Opportunity) -> int:
+        score = 0
         profile_skills_lower = [s.lower() for s in (profile.skills or [])]
         profile_domains_lower = [d.lower() for d in (profile.preferred_domains or [])]
+        opp_skills = [s.lower() for s in (opp.skills_required or [])]
+        opp_domains = [d.lower() for d in (opp.domains or [])]
+        text = (opp.title + " " + opp.description + " " + opp.company).lower()
 
+        for skill in profile_skills_lower:
+            if skill in text or skill in opp_skills:
+                score += 2
+        for domain in profile_domains_lower:
+            if domain in text or domain in opp_domains:
+                score += 3
+
+        if profile.preferred_locations:
+            for loc in profile.preferred_locations:
+                if opp.location and loc.lower() in opp.location.lower():
+                    score += 2
+
+        if profile.work_mode and opp.work_mode:
+            if profile.work_mode == opp.work_mode:
+                score += 2
+
+        return score
+
+    def _keyword_filter(self, profile: StudentProfile, opportunities: list[Opportunity]) -> list[Opportunity]:
         scored = []
         for opp in opportunities:
-            score = 0
-            opp_skills = [s.lower() for s in (opp.skills_required or [])]
-            opp_domains = [d.lower() for d in (opp.domains or [])]
-            text = (opp.title + " " + opp.description + " " + opp.company).lower()
-
-            for skill in profile_skills_lower:
-                if skill in text or skill in opp_skills:
-                    score += 2
-            for domain in profile_domains_lower:
-                if domain in text or domain in opp_domains:
-                    score += 3
-
-            if profile.preferred_locations:
-                for loc in profile.preferred_locations:
-                    if opp.location and loc.lower() in opp.location.lower():
-                        score += 2
-
-            if profile.work_mode and opp.work_mode:
-                if profile.work_mode == opp.work_mode:
-                    score += 2
-
+            score = self._compute_keyword_score(profile, opp)
             if score > 0:
                 scored.append((score, opp))
-
         scored.sort(key=lambda x: x[0], reverse=True)
         return [opp for _, opp in scored]
 
@@ -126,6 +166,7 @@ class RankingEngine:
     ) -> list[dict]:
         opp_text = []
         for opp in opportunities:
+            desc = (opp.description or "")[:200]
             opp_text.append(
                 f"ID: {opp.id}\n"
                 f"Title: {opp.title}\n"
@@ -134,7 +175,7 @@ class RankingEngine:
                 f"Stipend: {opp.stipend}\n"
                 f"Skills: {', '.join(opp.skills_required or [])}\n"
                 f"Work Mode: {opp.work_mode}\n"
-                f"Description: {(opp.description or '')[:500]}\n"
+                f"Description: {desc}\n"
             )
 
         prompt = RANKING_PROMPT.format(
@@ -151,7 +192,7 @@ class RankingEngine:
 
         if settings.llm_provider == "gemini" and self.gemini_client:
             response = await self.gemini_client.aio.models.generate_content(
-                model=settings.llm_model or "gemini-2.0-flash",
+                model=settings.llm_model or "gemini-2.5-flash",
                 contents=prompt,
                 config={
                     "max_output_tokens": 4000,
@@ -161,7 +202,7 @@ class RankingEngine:
             raw = response.text or ""
         elif settings.llm_provider == "anthropic" and self.anthropic_client:
             response = await self.anthropic_client.messages.create(
-                model=settings.llm_model or "claude-sonnet-4-20250514",
+                model=settings.llm_model or "claude-sonnet-4-5",
                 max_tokens=4000,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -177,11 +218,8 @@ class RankingEngine:
             )
             raw = response.choices[0].message.content or ""
 
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0]
-        if raw.startswith("json"):
-            raw = raw[4:].strip()
+        raw = re.sub(r'^```(?:json)?\s*', '', raw.strip())
+        raw = re.sub(r'\s*```$', '', raw)
 
         try:
             results = json.loads(raw)
@@ -193,16 +231,34 @@ class RankingEngine:
             logger.error(f"Failed to parse LLM response: {raw[:200]}")
             return self._score_fallback(profile, opportunities)
 
+        for item in results:
+            if "skill_gaps" not in item:
+                item["skill_gaps"] = []
+
         results.sort(key=lambda x: x.get("score", 0), reverse=True)
         return results[:top_k]
 
     def _score_fallback(self, profile: StudentProfile, opportunities: list[Opportunity]) -> list[dict]:
-        scored = self._keyword_filter(profile, opportunities)
+        scored_pairs = []
+        for opp in opportunities:
+            score = self._compute_keyword_score(profile, opp)
+            if score > 0:
+                scored_pairs.append((score, opp))
+
+        scored_pairs.sort(key=lambda x: x[0], reverse=True)
+        if not scored_pairs:
+            return []
+
+        max_score = max(s for s, _ in scored_pairs) if scored_pairs else 1
         results = []
-        for opp in scored:
+        for score, opp in scored_pairs:
+            normalized = min(round(score / max_score * 95), 95)
+            profile_skills_lower = set(s.lower() for s in (profile.skills or []))
+            opp_skills = set(s for s in (opp.skills_required or []) if s.lower() not in profile_skills_lower)
             results.append({
                 "opportunity_id": str(opp.id),
-                "score": 50,
-                "reason": "Matched based on skills and preferences",
+                "score": normalized,
+                "reason": "Matched based on skills and domain overlap",
+                "skill_gaps": list(opp_skills),
             })
         return results
