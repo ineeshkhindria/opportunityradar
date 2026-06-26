@@ -14,16 +14,16 @@ import { api } from '../lib/api';
 import { CustomSelect } from '../components/ui/CustomSelect';
 
 const DAYS = [
-  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
 ];
 
-const FREQUENCIES = ['weekly', 'biweekly', 'monthly'];
+const FREQUENCIES = ['Weekly', 'Biweekly', 'Monthly'];
 
 export function DigestPage() {
   const [prefs, setPrefs] = useState({
     enabled: true,
-    frequency: 'weekly',
-    day: 'sunday',
+    frequency: 'Weekly',
+    day: 'Sunday',
     time: '10:00',
     max_results: 5,
     min_match_score: 0,
@@ -40,7 +40,11 @@ export function DigestPage() {
       api.digest.getLogs(5),
     ])
       .then(([p, l]) => {
-        if (p) setPrefs(p);
+        if (p) setPrefs({
+          ...p,
+          day: p.day.charAt(0).toUpperCase() + p.day.slice(1),
+          frequency: p.frequency.charAt(0).toUpperCase() + p.frequency.slice(1),
+        });
         setLogs(l || []);
       })
       .catch(() => {})
@@ -51,8 +55,17 @@ export function DigestPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const updated = await api.digest.updatePreferences(prefs);
-      setPrefs(updated);
+      const payload = {
+        ...prefs,
+        day: prefs.day.toLowerCase(),
+        frequency: prefs.frequency.toLowerCase(),
+      };
+      const updated = await api.digest.updatePreferences(payload);
+      setPrefs({
+        ...updated,
+        day: updated.day.charAt(0).toUpperCase() + updated.day.slice(1),
+        frequency: updated.frequency.charAt(0).toUpperCase() + updated.frequency.slice(1),
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {} finally {
