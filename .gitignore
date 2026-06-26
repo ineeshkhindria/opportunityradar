@@ -13,3 +13,4 @@ __pycache__/
 .postgres-data/
 venv/
 api/venv/
+*.tsbuildinfo

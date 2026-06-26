@@ -224,7 +224,7 @@ export function HeroVisual() {
           {cardOrbit.map((card) => (
             <div
               key={card.id}
-              className="absolute flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white/90 backdrop-blur-sm border border-white/50 shadow-lg transition-all duration-300"
+              className="absolute flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-[#0c0c1a]/90 backdrop-blur-sm border border-white/10 shadow-xl shadow-black/30 transition-all duration-300"
               style={{
                 transform: `translate(${card.x}px, ${card.yOffset + mousePos.y * 5}px) scale(${card.scale})`,
                 opacity: card.opacity,
@@ -236,8 +236,8 @@ export function HeroVisual() {
                 {card.label.slice(0, 2).toUpperCase()}
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900 leading-tight">{card.label}</p>
-                <p className="text-[11px] text-gray-500 leading-tight">{card.sublabel}</p>
+                  <p className="text-sm font-semibold text-white leading-tight">{card.label}</p>
+                  <p className="text-[11px] text-gray-400 leading-tight">{card.sublabel}</p>
               </div>
             </div>
           ))}

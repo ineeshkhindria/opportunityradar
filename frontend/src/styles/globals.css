@@ -4,72 +4,141 @@
 
 @layer base {
   :root {
-    --color-brand-50: #f5f3ff;
-    --color-brand-500: #8b5cf6;
-    --color-brand-600: #7c3aed;
+    --color-brand-500: #00d4aa;
   }
 
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-surface text-gray-100 antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(0,212,170,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(168,85,247,0.04) 0%, transparent 50%),
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 60px 60px, 60px 60px;
   }
 }
 
 @layer components {
   .btn-primary {
     @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold text-white
-           bg-gradient-to-r from-brand-600 to-brand-500
-           hover:from-brand-700 hover:to-brand-600
-           shadow-lg shadow-brand-500/20 hover:shadow-xl hover:shadow-brand-500/30
+           bg-gradient-to-r from-brand-500 to-emerald-500
+           hover:from-brand-600 hover:to-emerald-600
+           shadow-lg shadow-brand-500/25 hover:shadow-xl hover:shadow-brand-500/40
            transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
     @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold
-           bg-white text-gray-700 border border-gray-200
-           hover:bg-gray-50 hover:border-gray-300
-           shadow-sm hover:shadow-md
+           bg-white/5 text-gray-200 border border-white/10
+           hover:bg-white/10 hover:border-white/20
+           shadow-md shadow-black/10 hover:shadow-lg hover:shadow-black/20
            transition-all duration-200;
   }
 
   .btn-ghost {
     @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium
-           text-gray-600 hover:text-gray-900 hover:bg-gray-100
+           text-gray-400 hover:text-white hover:bg-white/5
            transition-all duration-200;
   }
 
   .card {
-    @apply bg-white rounded-2xl border border-gray-100 shadow-sm;
+    @apply rounded-2xl border border-white/[0.06]
+           bg-white/[0.04] backdrop-blur-xl
+           shadow-lg shadow-black/20;
   }
 
   .card-hover {
-    @apply card hover:shadow-md hover:border-gray-200 transition-all duration-200;
+    @apply card hover:bg-white/[0.06] hover:border-white/[0.1]
+           hover:shadow-xl hover:shadow-black/30 transition-all duration-300;
   }
 
   .input-field {
-    @apply w-full px-4 py-3 rounded-xl border border-gray-200 bg-white
-           text-gray-900 placeholder-gray-400
-           focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500
+    @apply w-full px-4 py-3 rounded-xl border border-white/10
+           bg-white/[0.06] text-gray-100 placeholder-gray-500
+           focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/50
            transition-all duration-200;
   }
 
   .label {
-    @apply block text-sm font-medium text-gray-700 mb-1.5;
+    @apply block text-sm font-medium text-gray-300 mb-1.5;
   }
 
   .gradient-text {
-    @apply bg-gradient-to-r from-brand-600 via-purple-500 to-brand-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-brand-400 via-emerald-400 to-brand-500 bg-clip-text text-transparent;
   }
 
   .match-score {
     @apply inline-flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm text-white;
   }
 
-  .match-score-high { @apply bg-gradient-to-br from-emerald-400 to-emerald-500; }
-  .match-score-med { @apply bg-gradient-to-br from-amber-400 to-amber-500; }
-  .match-score-low { @apply bg-gradient-to-br from-red-400 to-red-500; }
+  .match-score-high { @apply bg-gradient-to-br from-emerald-400 to-emerald-500 shadow-lg shadow-emerald-500/20; }
+  .match-score-med { @apply bg-gradient-to-br from-amber-400 to-amber-500 shadow-lg shadow-amber-500/20; }
+  .match-score-low { @apply bg-gradient-to-br from-red-400 to-red-500 shadow-lg shadow-red-500/20; }
 
   .glass {
-    @apply bg-white/70 backdrop-blur-xl border border-white/20;
+    @apply bg-white/[0.04] backdrop-blur-xl border border-white/[0.06];
+  }
+
+  .glow-border {
+    @apply border-brand-500/20 shadow-[0_0_15px_rgba(0,212,170,0.1)];
+  }
+
+  /* Custom Select */
+  .custom-select {
+    @apply relative;
+  }
+
+  .custom-select-trigger {
+    @apply w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl
+           bg-white/[0.06] border border-white/10 text-gray-100 text-left
+           hover:bg-white/[0.08] hover:border-white/20
+           focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/50
+           transition-all duration-200 cursor-pointer;
+  }
+
+  .custom-select-trigger[aria-expanded="true"] {
+    @apply border-brand-500/50 bg-white/[0.08] ring-2 ring-brand-500/30;
+  }
+
+  .custom-select-dropdown {
+    @apply absolute z-50 mt-1 w-full rounded-xl overflow-hidden
+           bg-[#0c0c1a] border border-white/[0.08]
+           shadow-2xl shadow-black/50 backdrop-blur-2xl;
+  }
+
+  .custom-select-search {
+    @apply w-full px-4 py-3 bg-white/[0.04] border-b border-white/[0.06]
+           text-gray-100 placeholder-gray-500 text-sm
+           focus:outline-none;
+  }
+
+  .custom-select-option {
+    @apply w-full px-4 py-3 text-left text-sm text-gray-300
+           hover:bg-white/[0.06] hover:text-white
+           transition-colors duration-150 cursor-pointer;
+  }
+
+  .custom-select-option[data-selected="true"] {
+    @apply bg-brand-500/10 text-brand-300;
+  }
+
+  .custom-select-option[data-highlighted="true"] {
+    @apply bg-white/[0.04] text-white;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.2);
   }
 }

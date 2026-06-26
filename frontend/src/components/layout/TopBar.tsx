@@ -7,9 +7,9 @@ export function TopBar() {
   const navigate = useNavigate();
 
   return (
-    <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-6">
+    <header className="h-16 bg-white/[0.02] border-b border-white/[0.06] flex items-center justify-between px-6 backdrop-blur-xl">
       <div>
-        <h1 className="text-lg font-semibold text-gray-900">
+        <h1 className="text-lg font-semibold text-gray-100">
           Welcome back, {user?.full_name?.split(' ')[0] || 'Student'}
         </h1>
       </div>
@@ -24,7 +24,7 @@ export function TopBar() {
         </button>
         <button
           onClick={logout}
-          className="btn-ghost text-red-500 hover:text-red-600 hover:bg-red-50"
+          className="btn-ghost text-red-400 hover:text-red-300 hover:bg-red-500/10"
         >
           <LogOut className="w-4 h-4 mr-2" />
           Logout

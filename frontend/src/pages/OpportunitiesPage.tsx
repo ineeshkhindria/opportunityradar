@@ -13,9 +13,9 @@ import {
   Globe,
   Briefcase,
   Rocket,
-  FlaskConical,
 } from 'lucide-react';
 import { api } from '../lib/api';
+import { CustomSelect } from '../components/ui/CustomSelect';
 
 const SOURCE_ICONS: Record<string, typeof Briefcase> = {
   internshala: Briefcase,
@@ -24,9 +24,9 @@ const SOURCE_ICONS: Record<string, typeof Briefcase> = {
 };
 
 const SOURCE_COLORS: Record<string, string> = {
-  internshala: 'bg-orange-50 text-orange-600 border-orange-200',
-  linkedin: 'bg-blue-50 text-blue-600 border-blue-200',
-  wellfound: 'bg-purple-50 text-purple-600 border-purple-200',
+  internshala: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+  linkedin: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  wellfound: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
 };
 
 export function OpportunitiesPage() {
@@ -55,7 +55,6 @@ export function OpportunitiesPage() {
       setTotal(res.total);
       setTotalPages(res.total_pages);
     } catch {
-      // handled
     } finally {
       setLoading(false);
     }
@@ -68,25 +67,29 @@ export function OpportunitiesPage() {
     try {
       await api.applications.create({ opportunity_id: oppId });
     } catch {
-      // already saved or error
     } finally {
       setSaving(null);
     }
   };
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Opportunities</h1>
-        <p className="text-gray-500 mt-1">{total} internships found across all sources</p>
+      <div className="flex items-center gap-4">
+        <div className="w-14 h-14 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
+          <Briefcase className="w-7 h-7 text-brand-400" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-white">Opportunities</h1>
+          <p className="text-gray-400 mt-1">{total} internships found across all sources</p>
+        </div>
       </div>
 
       {/* Search & Filters */}
       <div className="card p-4">
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input
               type="text"
               className="input-field pl-10"
@@ -97,7 +100,7 @@ export function OpportunitiesPage() {
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`btn-secondary ${showFilters ? 'bg-brand-50 border-brand-200 text-brand-700' : ''}`}
+            className={`btn-secondary shrink-0 ${showFilters ? 'bg-brand-500/10 border-brand-500/30 text-brand-300' : ''}`}
           >
             <SlidersHorizontal className="w-4 h-4 mr-2" />
             Filters
@@ -105,33 +108,29 @@ export function OpportunitiesPage() {
         </div>
 
         {showFilters && (
-          <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
-            <select
-              className="input-field w-44"
-              value={sourceFilter}
-              onChange={(e) => { setSourceFilter(e.target.value); setPage(1); }}
-            >
-              <option value="">All Sources</option>
-              <option value="internshala">Internshala</option>
-              <option value="linkedin">LinkedIn</option>
-              <option value="wellfound">Wellfound</option>
-            </select>
-            <select
-              className="input-field w-44"
-              value={workModeFilter}
-              onChange={(e) => { setWorkModeFilter(e.target.value); setPage(1); }}
-            >
-              <option value="">All Modes</option>
-              <option value="remote">Remote</option>
-              <option value="hybrid">Hybrid</option>
-              <option value="onsite">On-site</option>
-            </select>
+          <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-white/[0.06]">
+            <div className="w-44">
+              <CustomSelect
+                value={sourceFilter}
+                onChange={(v) => { setSourceFilter(v); setPage(1); }}
+                options={['', 'internshala', 'linkedin', 'wellfound']}
+                placeholder="All Sources"
+              />
+            </div>
+            <div className="w-44">
+              <CustomSelect
+                value={workModeFilter}
+                onChange={(v) => { setWorkModeFilter(v); setPage(1); }}
+                options={['', 'remote', 'hybrid', 'onsite']}
+                placeholder="All Modes"
+              />
+            </div>
             <button
               onClick={() => { setStartupOnly(!startupOnly); setPage(1); }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium border transition-all ${
                 startupOnly
-                  ? 'bg-brand-50 text-brand-700 border-brand-200'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                  ? 'bg-brand-500/10 text-brand-300 border-brand-500/30'
+                  : 'bg-white/[0.04] text-gray-400 border-white/[0.06] hover:border-white/[0.15] hover:text-gray-200'
               }`}
             >
               <Rocket className="w-4 h-4" />
@@ -148,9 +147,9 @@ export function OpportunitiesPage() {
         </div>
       ) : opportunities.length === 0 ? (
         <div className="card p-12 text-center">
-          <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500 text-lg">No opportunities match your criteria</p>
-          <p className="text-gray-400 text-sm mt-1">Try adjusting your filters</p>
+          <Briefcase className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-400 text-lg">No opportunities match your criteria</p>
+          <p className="text-gray-500 text-sm mt-1">Try adjusting your filters</p>
         </div>
       ) : (
         <div className="grid gap-4">
@@ -171,19 +170,19 @@ export function OpportunitiesPage() {
                       <div>
                         <Link
                           to={`/opportunities/${opp.id}`}
-                          className="text-lg font-semibold text-gray-900 hover:text-brand-600 transition-colors"
+                          className="text-lg font-semibold text-gray-100 hover:text-brand-400 transition-colors"
                         >
                           {opp.title}
                         </Link>
-                        <p className="text-brand-600 font-medium text-sm mt-0.5">{opp.company}</p>
+                        <p className="text-brand-400 font-medium text-sm mt-0.5">{opp.company}</p>
                       </div>
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${SOURCE_COLORS[opp.source] || 'bg-gray-50 text-gray-600'}`}>
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${SOURCE_COLORS[opp.source] || 'bg-white/[0.06] text-gray-400'}`}>
                         <SourceIcon className="w-3 h-3" />
                         {opp.source}
                       </span>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500">
+                    <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-400">
                       {opp.location && (
                         <span className="flex items-center gap-1.5">
                           <MapPin className="w-3.5 h-3.5" />
@@ -203,7 +202,7 @@ export function OpportunitiesPage() {
                     </div>
 
                     {opp.match_reason && (
-                      <p className="mt-3 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                      <p className="mt-3 text-sm text-gray-400 bg-white/[0.03] border border-white/[0.06] rounded-lg p-3">
                         {opp.match_reason}
                       </p>
                     )}
@@ -211,12 +210,12 @@ export function OpportunitiesPage() {
                     {/* Startup badge */}
                     {opp.company_funding_stage && (
                       <div className="mt-3 flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-brand-50 to-purple-50 text-brand-700 border border-brand-200">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-brand-500/10 text-brand-300 border border-brand-500/20">
                           <Rocket className="w-3 h-3" />
                           {opp.company_funding_stage}
                         </span>
                         {opp.company_age_months && (
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-gray-500">
                             {Math.round(opp.company_age_months)} months old
                           </span>
                         )}
@@ -227,12 +226,12 @@ export function OpportunitiesPage() {
                     {opp.skills_required?.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3">
                         {opp.skills_required.slice(0, 5).map((skill: string) => (
-                          <span key={skill} className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium">
+                          <span key={skill} className="px-2.5 py-1 bg-white/[0.06] text-gray-300 rounded-lg text-xs font-medium">
                             {skill}
                           </span>
                         ))}
                         {opp.skills_required.length > 5 && (
-                          <span className="px-2.5 py-1 text-gray-400 text-xs">
+                          <span className="px-2.5 py-1 text-gray-500 text-xs">
                             +{opp.skills_required.length - 5} more
                           </span>
                         )}
@@ -249,7 +248,7 @@ export function OpportunitiesPage() {
                       title="Save opportunity"
                     >
                       {saving === opp.id ? (
-                        <Check className="w-4 h-4 text-emerald-500" />
+                        <Check className="w-4 h-4 text-emerald-400" />
                       ) : (
                         <BookmarkPlus className="w-4 h-4" />
                       )}

@@ -4,7 +4,6 @@ import {
   Save,
   Loader2,
   GraduationCap,
-  BookOpen,
   Wrench,
   Heart,
   MapPin,
@@ -14,8 +13,11 @@ import {
   Linkedin,
   ExternalLink,
   FileText,
+  X,
+  Plus,
 } from 'lucide-react';
 import { api } from '../lib/api';
+import { CustomSelect } from '../components/ui/CustomSelect';
 
 const BRANCHES = [
   'Computer Science', 'Information Technology', 'Electronics', 'Mechanical',
@@ -142,17 +144,22 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Your Profile</h1>
-        <p className="text-gray-500 mt-1">Tell us about yourself so we can find the best matches</p>
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex items-center gap-4">
+        <div className="w-14 h-14 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
+          <User className="w-7 h-7 text-brand-400" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-white">Your Profile</h1>
+          <p className="text-gray-400 mt-1">Tell us about yourself so we can find the best matches</p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Info */}
+        {/* Education */}
         <div className="card p-6 space-y-5">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <GraduationCap className="w-5 h-5 text-brand-500" />
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <GraduationCap className="w-5 h-5 text-brand-400" />
             Education
           </h2>
 
@@ -182,37 +189,31 @@ export function ProfilePage() {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="label">Year</label>
-              <select
-                className="input-field"
+              <CustomSelect
                 value={form.year}
-                onChange={(e) => setForm({ ...form, year: e.target.value })}
-              >
-                <option value="">Select year</option>
-                {YEARS.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
+                onChange={(v) => setForm({ ...form, year: v })}
+                options={YEARS}
+                placeholder="Select year"
+                searchable
+              />
             </div>
             <div>
               <label className="label">Branch / Major</label>
-              <select
-                className="input-field"
+              <CustomSelect
                 value={form.branch}
-                onChange={(e) => setForm({ ...form, branch: e.target.value })}
-              >
-                <option value="">Select branch</option>
-                {BRANCHES.map((b) => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
+                onChange={(v) => setForm({ ...form, branch: v })}
+                options={BRANCHES}
+                placeholder="Select branch"
+                searchable
+              />
             </div>
           </div>
         </div>
 
         {/* Skills */}
         <div className="card p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Wrench className="w-5 h-5 text-brand-500" />
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Wrench className="w-5 h-5 text-brand-400" />
             Skills
           </h2>
 
@@ -222,7 +223,7 @@ export function ProfilePage() {
                 key={skill}
                 type="button"
                 onClick={() => addSkill(skill)}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-brand-50 hover:text-brand-700 transition-colors"
+                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-white/[0.06] text-gray-300 hover:bg-brand-500/10 hover:text-brand-300 border border-white/[0.06] hover:border-brand-500/20 transition-all"
               >
                 + {skill}
               </button>
@@ -233,20 +234,24 @@ export function ProfilePage() {
             <input
               type="text"
               className="input-field"
-              placeholder="Type a skill and press Add"
+              placeholder="Type a skill and press Enter"
               value={skillInput}
               onChange={(e) => setSkillInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill(skillInput))}
             />
-            <button type="button" onClick={() => addSkill(skillInput)} className="btn-secondary">Add</button>
+            <button type="button" onClick={() => addSkill(skillInput)} className="btn-secondary shrink-0">
+              <Plus className="w-4 h-4" />
+            </button>
           </div>
 
           {form.skills.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {form.skills.map((skill) => (
-                <span key={skill} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 text-brand-700 rounded-lg text-sm font-medium">
+                <span key={skill} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-500/10 text-brand-300 border border-brand-500/20 rounded-lg text-sm font-medium">
                   {skill}
-                  <button type="button" onClick={() => removeSkill(skill)} className="hover:text-red-500">&times;</button>
+                  <button type="button" onClick={() => removeSkill(skill)} className="hover:text-red-400 transition-colors">
+                    <X className="w-3 h-3" />
+                  </button>
                 </span>
               ))}
             </div>
@@ -255,8 +260,8 @@ export function ProfilePage() {
 
         {/* Preferences */}
         <div className="card p-6 space-y-5">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Heart className="w-5 h-5 text-brand-500" />
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Heart className="w-5 h-5 text-brand-400" />
             Preferences
           </h2>
 
@@ -270,8 +275,8 @@ export function ProfilePage() {
                   onClick={() => toggleDomain(domain)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
                     form.preferred_domains.includes(domain)
-                      ? 'bg-brand-50 text-brand-700 border-brand-200'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                      ? 'bg-brand-500/10 text-brand-300 border-brand-500/30'
+                      : 'bg-white/[0.04] text-gray-400 border-white/[0.06] hover:border-white/[0.15] hover:text-gray-200'
                   }`}
                 >
                   {domain}
@@ -292,15 +297,19 @@ export function ProfilePage() {
                   onChange={(e) => setLocationInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addLocation())}
                 />
-                <button type="button" onClick={addLocation} className="btn-secondary">Add</button>
+                <button type="button" onClick={addLocation} className="btn-secondary shrink-0">
+                  <Plus className="w-4 h-4" />
+                </button>
               </div>
               {form.preferred_locations.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {form.preferred_locations.map((loc) => (
-                    <span key={loc} className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm">
-                      <MapPin className="w-3 h-3" />
+                    <span key={loc} className="inline-flex items-center gap-1 px-3 py-1 bg-white/[0.06] text-gray-300 border border-white/[0.06] rounded-lg text-sm">
+                      <MapPin className="w-3 h-3 text-brand-400" />
                       {loc}
-                      <button type="button" onClick={() => removeLocation(loc)} className="hover:text-red-500">&times;</button>
+                      <button type="button" onClick={() => removeLocation(loc)} className="hover:text-red-400 transition-colors">
+                        <X className="w-3 h-3" />
+                      </button>
                     </span>
                   ))}
                 </div>
@@ -317,8 +326,8 @@ export function ProfilePage() {
                     onClick={() => setForm({ ...form, work_mode: mode })}
                     className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all capitalize ${
                       form.work_mode === mode
-                        ? 'bg-brand-50 text-brand-700 border-brand-200'
-                        : 'bg-white text-gray-600 border-gray-200'
+                        ? 'bg-brand-500/10 text-brand-300 border-brand-500/30'
+                        : 'bg-white/[0.04] text-gray-400 border-white/[0.06] hover:border-white/[0.15] hover:text-gray-200'
                     }`}
                   >
                     {mode}
@@ -330,20 +339,23 @@ export function ProfilePage() {
 
           <div>
             <label className="label">Minimum Expected Stipend (INR/month)</label>
-            <input
-              type="number"
-              className="input-field"
-              placeholder="15000"
-              value={form.min_stipend || ''}
-              onChange={(e) => setForm({ ...form, min_stipend: parseInt(e.target.value) || 0 })}
-            />
+            <div className="relative">
+              <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <input
+                type="number"
+                className="input-field pl-10"
+                placeholder="15000"
+                value={form.min_stipend || ''}
+                onChange={(e) => setForm({ ...form, min_stipend: parseInt(e.target.value) || 0 })}
+              />
+            </div>
           </div>
         </div>
 
         {/* Links */}
         <div className="card p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Globe className="w-5 h-5 text-brand-500" />
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Globe className="w-5 h-5 text-brand-400" />
             Links
           </h2>
 
@@ -389,12 +401,12 @@ export function ProfilePage() {
 
         {/* Bio */}
         <div className="card p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-brand-500" />
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <FileText className="w-5 h-5 text-brand-400" />
             Bio
           </h2>
           <textarea
-            className="input-field min-h-[100px] resize-y"
+            className="input-field min-h-[120px] resize-y"
             placeholder="Tell us a bit about yourself, your interests, and what you're looking for..."
             value={form.bio}
             onChange={(e) => setForm({ ...form, bio: e.target.value })}
@@ -412,7 +424,7 @@ export function ProfilePage() {
               <><Save className="w-4 h-4 mr-2" /> Save Profile</>
             )}
           </button>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-gray-500">
             Your profile is used to match you with the best opportunities
           </p>
         </div>
