@@ -82,19 +82,36 @@ python -m pytest tests/ -v
 
 ## Deployment
 
-### Option 1: Render (Recommended, no credit card)
+### Deploy to Render (free, no credit card)
 
-- **Web Service:** Deploy `backend/` as a FastAPI web service
-- **Cron Job:** Replace Celery beat with GitHub Actions (`.github/workflows/scrape.yml`)
-- **Postgres + Redis:** Use Render's free managed Postgres and Redis
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
 
-### Option 2: Vercel (Frontend + CRUD API only)
+1. **Fork/clone this repo** to your GitHub account
+2. **Click the Deploy to Render button above** — it reads `render.yaml`
+3. **Or set up manually:**
+   - Create a **Web Service** on Render, connect your GitHub repo
+   - Set **Root Directory** to `backend`
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - Select the **Free** plan
+4. **Set environment variables** in Render dashboard:
+   - `DATABASE_URL` — use Render's managed PostgreSQL (create one in dashboard)
+   - `SUPABASE_JWT_SECRET` — generate a random 64-char string
+   - `GEMINI_API_KEY` — your Gemini API key
+   - `FRONTEND_URL` — your Vercel frontend URL (once deployed)
+   - `CORS_ORIGINS` — e.g. `["https://opportunityradar.vercel.app"]`
+   - `DEBUG` — `false`
+5. **Deploy the frontend on Vercel:**
+   - Import the same repo into Vercel
+   - Set **Root Directory** to `frontend`
+   - **Build Command:** `npm install && npm run build`
+   - **Output Directory:** `dist`
+   - Set env var `VITE_API_URL` to your Render backend URL (e.g. `https://opportunityradar-api.onrender.com`)
+6. **Set up scraping** via GitHub Actions (`.github/workflows/scrape.yml`) — add `DATABASE_URL` and `SUPABASE_JWT_SECRET` to your repo secrets
 
-See `vercel.json`. Background jobs (scraping, digests) must run elsewhere.
+### Deploy to Vercel (frontend only)
 
-### Option 3: Oracle Cloud Free Tier
-
-Permanent free VM (4 cores, 24 GB RAM ARM). Run the full Docker Compose stack.
+See `vercel.json`. Backend must run on Render/Railway/Oracle for full functionality.
 
 ## API Endpoints
 
