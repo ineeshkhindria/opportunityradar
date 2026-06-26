@@ -12,8 +12,9 @@ class Settings(BaseSettings):
 
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
-    llm_provider: str = "openai"
-    llm_model: str = "gpt-4o"
+    gemini_api_key: Optional[str] = None
+    llm_provider: str = "gemini"
+    llm_model: str = "gemini-2.0-flash"
 
     sendgrid_api_key: Optional[str] = None
     from_email: str = "hello@opportunityradar.com"

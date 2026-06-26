@@ -46,6 +46,7 @@ class RankingEngine:
     def __init__(self):
         self.openai_client = None
         self.anthropic_client = None
+        self.gemini_client = None
         self._init_clients()
 
     def _init_clients(self):
@@ -53,6 +54,9 @@ class RankingEngine:
             self.openai_client = AsyncOpenAI(api_key=settings.openai_api_key)
         if settings.anthropic_api_key:
             self.anthropic_client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+        if settings.gemini_api_key:
+            from google import genai
+            self.gemini_client = genai.Client(api_key=settings.gemini_api_key)
 
     async def rank_for_user(
         self,
@@ -71,7 +75,8 @@ class RankingEngine:
 
         candidates = pre_filtered[:50]
 
-        if not self.openai_client and not self.anthropic_client:
+        has_llm = self.openai_client or self.anthropic_client or self.gemini_client
+        if not has_llm:
             return self._score_fallback(profile, candidates)
 
         try:
@@ -144,7 +149,17 @@ class RankingEngine:
             opportunities="\n---\n".join(opp_text),
         )
 
-        if settings.llm_provider == "anthropic" and self.anthropic_client:
+        if settings.llm_provider == "gemini" and self.gemini_client:
+            response = await self.gemini_client.aio.models.generate_content(
+                model=settings.llm_model or "gemini-2.0-flash",
+                contents=prompt,
+                config={
+                    "max_output_tokens": 4000,
+                    "temperature": 0.3,
+                },
+            )
+            raw = response.text or ""
+        elif settings.llm_provider == "anthropic" and self.anthropic_client:
             response = await self.anthropic_client.messages.create(
                 model=settings.llm_model or "claude-sonnet-4-20250514",
                 max_tokens=4000,
