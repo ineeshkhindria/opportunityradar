@@ -2,8 +2,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.pool import NullPool
 from app.config import settings
 
+db_url = settings.database_url
+if db_url.startswith("postgresql://") and "+" not in db_url.split("://")[0]:
+    db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
 engine = create_async_engine(
-    settings.database_url,
+    db_url,
     echo=settings.debug,
     poolclass=NullPool,
 )
