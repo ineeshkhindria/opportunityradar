@@ -1,33 +1,45 @@
+# User-selected temporary recovery: free API and a fresh free database only.
+# The database expires after 30 days. Scheduled jobs require separate workers.
+# Paid always-on infrastructure is opt-in via render.production.yaml.
 services:
   - type: web
-    name: opportunityradar-api
-    env: docker
+    name: opportunityradar-api-y78m
+    runtime: docker
     region: oregon
     plan: free
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /api/health
+    healthCheckPath: /api/ready
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: opportunityradar-db
+          name: opportunityradar-db-recovery
           property: connectionString
       - key: SUPABASE_JWT_SECRET
         generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ADMIN_USER_IDS
+        value: '[]'
+      - key: FRONTEND_URL
+        value: https://opportunityradar-gamma.vercel.app
+      - key: CORS_ORIGINS
+        value: '["https://opportunityradar-gamma.vercel.app","https://opportunityradar-git-fork-anvay-4ddc06-ineeshkhindrias-projects.vercel.app"]'
+      - key: REDIS_URL
+        value: ""
+      - key: PUBLIC_FEED_ENABLED
+        value: "true"
       - key: LLM_PROVIDER
         value: gemini
       - key: LLM_MODEL
         value: gemini-2.5-flash
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: FRONTEND_URL
-        value: https://opportunityradar.vercel.app
-      - key: CORS_ORIGINS
-        value: '["https://opportunityradar.vercel.app"]'
+      - key: DIGEST_TIMEZONE
+        value: UTC
       - key: DEBUG
-        value: false
+        value: "false"
 
 databases:
-  - name: opportunityradar-db
+  - name: opportunityradar-db-recovery
     plan: free
     region: oregon
-    postgresMajorVersion: 16
+    postgresMajorVersion: "16"
+    ipAllowList: []

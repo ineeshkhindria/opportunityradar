@@ -14,7 +14,8 @@ import {
   Briefcase,
   Rocket,
 } from 'lucide-react';
-import { api } from '../lib/api';
+import { api, ApiError, getErrorMessage } from '../lib/api';
+import { RequestError } from '../components/ui/RequestError';
 import { CustomSelect } from '../components/ui/CustomSelect';
 
 const SOURCE_ICONS: Record<string, typeof Briefcase> = {
@@ -32,9 +33,12 @@ const SOURCE_COLORS: Record<string, string> = {
 export function OpportunitiesPage() {
   const [opportunities, setOpportunities] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
+  const [catalogTotal, setCatalogTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [search, setSearch] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
   const [workModeFilter, setWorkModeFilter] = useState('');
@@ -44,6 +48,8 @@ export function OpportunitiesPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
+    setLoadFailed(false);
     try {
       const params: Record<string, string | number> = { page, page_size: 20 };
       if (search) params.search = search;
@@ -53,8 +59,11 @@ export function OpportunitiesPage() {
       const res = await api.opportunities.list(params);
       setOpportunities(res.items);
       setTotal(res.total);
+      setCatalogTotal(res.catalog_total ?? res.total);
       setTotalPages(res.total_pages);
-    } catch {
+    } catch (err) {
+      setError(getErrorMessage(err));
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -64,16 +73,21 @@ export function OpportunitiesPage() {
 
   const handleSave = async (oppId: string) => {
     setSaving(oppId);
+    setError(null);
     try {
       await api.applications.create({ opportunity_id: oppId });
-    } catch {
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setSaving(null);
     }
   };
 
+  if (loadFailed && !loading) return <RequestError message={error || 'Unable to load opportunities.'} onRetry={load} />;
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
+      {error && <RequestError message={error} />}
       {/* Header */}
       <div className="flex items-center gap-4">
         <div className="w-14 h-14 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
@@ -81,7 +95,7 @@ export function OpportunitiesPage() {
         </div>
         <div>
           <h1 className="text-3xl font-bold text-white">Opportunities</h1>
-          <p className="text-gray-400 mt-1">{total} internships found across all sources</p>
+          <p className="text-gray-400 mt-1">{total} internships {search || sourceFilter || workModeFilter || startupOnly ? 'match your filters' : 'found across all sources'}</p>
         </div>
       </div>
 
@@ -113,7 +127,7 @@ export function OpportunitiesPage() {
               <CustomSelect
                 value={sourceFilter}
                 onChange={(v) => { setSourceFilter(v); setPage(1); }}
-                options={['', 'internshala', 'linkedin', 'wellfound']}
+                options={['', 'greenhouse', 'internshala', 'linkedin', 'wellfound', 'yc']}
                 placeholder="All Sources"
               />
             </div>
@@ -148,8 +162,13 @@ export function OpportunitiesPage() {
       ) : opportunities.length === 0 ? (
         <div className="card p-12 text-center">
           <Briefcase className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400 text-lg">No opportunities match your criteria</p>
-          <p className="text-gray-500 text-sm mt-1">Try adjusting your filters</p>
+          <p className="text-gray-400 text-lg">{catalogTotal === 0 ? 'No internships have been imported yet' : 'No opportunities match your criteria'}</p>
+          <p className="text-gray-500 text-sm mt-1">{catalogTotal === 0 ? 'Check back shortly for new employer postings.' : 'Try adjusting your filters. Company age is only available when the source provides it.'}</p>
+          <button className="btn-secondary mt-4" onClick={() => {
+            if (search || sourceFilter || workModeFilter || startupOnly || page !== 1) {
+              setSearch(''); setSourceFilter(''); setWorkModeFilter(''); setStartupOnly(false); setPage(1);
+            } else { load(); }
+          }}>{catalogTotal === 0 ? 'Refresh listings' : 'Clear filters'}</button>
         </div>
       ) : (
         <div className="grid gap-4">
